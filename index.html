@@ -642,6 +642,25 @@ main:focus{outline:none}
 .proc-li svg{width:28px;height:28px;color:var(--oxigenio);flex:none;margin-top:2px}
 .proc-li b{display:block;font-family:var(--fd);font-weight:600;font-size:1.08rem;color:var(--abissal)}
 .proc-li span{color:var(--ink-2);font-size:.96rem}
+/* cilindro 3D (js/cilindro3d.min.js): entra no lugar da foto quando o WebGL carrega */
+.proc-ph.cil-on{background:radial-gradient(120% 78% at 50% 16%,#FFFFFF 0%,#EFF4FB 46%,#DDEBFF 100%)}
+.proc-ph > img{transition:opacity .9s var(--ease-out)}
+.proc-ph.cil-on > img{opacity:0}
+.cil-cv{position:absolute;inset:0;width:100%!important;height:100%!important;opacity:0;transition:opacity .9s var(--ease-out);touch-action:pan-y;cursor:grab}
+.proc-ph.cil-on .cil-cv{opacity:1}
+.proc-ph.grab .cil-cv{cursor:grabbing}
+.cil-dot{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:var(--oxigenio);box-shadow:0 0 0 4px rgba(255,255,255,.92),0 6px 16px rgba(7,26,59,.3);opacity:0;scale:.4;transition:opacity .35s ease,scale .45s var(--ease-out);pointer-events:none}
+.cil-dot.on{opacity:1;scale:1}
+.cil-dot::after{content:"";position:absolute;inset:-10px;border-radius:50%;border:1.5px solid rgba(31,85,240,.55);animation:cilPulse 2.2s var(--ease-out) infinite}
+@keyframes cilPulse{from{opacity:1;scale:.5}to{opacity:0;scale:1.6}}
+.cil-hint{margin-top:14px;text-align:center}
+.proc-li .proc-b{display:flex;gap:16px;align-items:flex-start;width:100%;text-align:left;padding:16px 12px 16px 0;border-radius:14px;transition:background-color var(--t-hover) ease,padding var(--t-ui) var(--ease-out)}
+.proc-li li[data-cil]{padding:0}
+.proc-li .proc-b b{transition:color var(--t-hover) ease}
+.proc-li .proc-b[aria-pressed=true]{background:#F1F5FD;padding-left:14px}
+.proc-li .proc-b[aria-pressed=true] b{color:var(--oxigenio)}
+@media (hover:hover){.proc-li .proc-b:hover b{color:var(--oxigenio)}}
+@media (prefers-reduced-motion:reduce){.cil-dot::after{animation:none}}
 
 /* desde 1982 */
 .desde{position:relative;min-height:min(100svh,980px);display:flex;align-items:flex-end;overflow:clip}
@@ -1372,14 +1391,15 @@ main:focus{outline:none}
   <div class="wrap split b">
     <figure class="proc-fig">
       <div class="ph lift proc-ph" data-reveal="clip"><img src="img/cilindro.webp" alt="Cilindro verde de oxigênio medicinal com a etiqueta da Oxigênio Uberlândia, em primeiro plano" loading="lazy" width="1400" height="1750"></div>
+      <figcaption class="note cil-hint" hidden>Arraste para girar. Toque nos itens da lista para ver cada detalhe.</figcaption>
     </figure>
     <div class="stack g-24">
       <h2 class="d2" id="proc-h">Procedência que você confere.</h2>
       <p class="lead">Oxigênio medicinal é medicamento. Cada cilindro sai conferido, lacrado e com etiqueta de lote, e você confere tudo isso sem precisar perguntar.</p>
       <ul class="proc-li">
-        <li><svg viewBox="0 0 48 48" aria-hidden="true"><use href="#i-lacre"/></svg><span><b>Lacre na válvula</b>Mostra que o cilindro não foi aberto depois da conferência.</span></li>
-        <li><svg viewBox="0 0 48 48" aria-hidden="true"><use href="#i-qr"/></svg><span><b>Etiqueta com lote</b>Envase, teste hidrostático, volume e QR do lote.</span></li>
-        <li><svg viewBox="0 0 48 48" aria-hidden="true"><use href="#i-cilindro"/></svg><span><b>Verde por norma</b>ABNT NBR 12176. A marca vai só na etiqueta.</span></li>
+        <li data-cil="lacre"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="#i-lacre"/></svg><span><b>Lacre na válvula</b>Mostra que o cilindro não foi aberto depois da conferência.</span></li>
+        <li data-cil="etiqueta"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="#i-qr"/></svg><span><b>Etiqueta com lote</b>Envase, teste hidrostático, volume e QR do lote.</span></li>
+        <li data-cil="verde"><svg viewBox="0 0 48 48" aria-hidden="true"><use href="#i-cilindro"/></svg><span><b>Verde por norma</b>ABNT NBR 12176. A marca vai só na etiqueta.</span></li>
       </ul>
       <div class="btns"><a class="btn" href="#etiqueta">Entenda a etiqueta</a><a class="btn ghost" href="#procedencia">Ver a procedência</a></div>
     </div>
@@ -3126,5 +3146,39 @@ OXI.view('contato',{
   }
 });
 
+</script>
+<script type="module">
+/* cilindro 3D da seção Procedência: carrega só quando a seção chega perto da tela */
+const fig=document.querySelector('.proc-fig');
+if(fig&&'IntersectionObserver' in window){
+  const io=new IntersectionObserver(async es=>{
+    if(!es.some(e=>e.isIntersecting)) return; io.disconnect();
+    try{
+      const m=await import('./js/cilindro3d.min.js');
+      const qr=document.querySelector('.lb-qr .qr path');
+      const api=await m.mount(fig,{debug:/[?m.mount(fig,{qr:]cil-debug/.test(location.search),qr:qr?qr.getAttribute('d'):''});
+      if(api) wire(api);
+    }catch(e){ console.error('[oxi] cilindro 3d',e); }
+  },{rootMargin:'900px 0px'});
+  io.observe(fig);
+}
+function wire(api){
+  const sec=fig.closest('section'), hint=fig.querySelector('.cil-hint'); if(hint) hint.hidden=false;
+  const bs=[...sec.querySelectorAll('.proc-li li[data-cil]')].map(li=>{
+    const b=document.createElement('button'); b.type='button'; b.className='proc-b'; b.dataset.cil=li.dataset.cil; b.setAttribute('aria-pressed','false');
+    while(li.firstChild) b.appendChild(li.firstChild); li.appendChild(b); return b;
+  });
+  // passar o mouse mostra o detalhe; clicar fixa (clicar de novo solta e volta à vista geral)
+  let t=0, pin=null;
+  const show=n=>{ clearTimeout(t); api.set(n); bs.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cil===n))); };
+  bs.forEach(b=>{
+    b.addEventListener('click',()=>{ pin=pin===b.dataset.cil?null:b.dataset.cil; show(pin||'geral'); });
+    b.addEventListener('focus',()=>{ if(!pin) show(b.dataset.cil); });
+    if(matchMedia('(hover:hover)').matches) b.addEventListener('pointerenter',()=>{ clearTimeout(t); t=setTimeout(()=>show(b.dataset.cil),110); });
+  });
+  const list=sec.querySelector('.proc-li');
+  if(matchMedia('(hover:hover)').matches) list.addEventListener('pointerleave',()=>{ clearTimeout(t); t=setTimeout(()=>show(pin||'geral'),600); });
+  list.addEventListener('focusout',e=>{ if(!list.contains(e.relatedTarget)&&!pin) show('geral'); });
+}
 </script>
 </body></html>
